@@ -43,4 +43,4 @@ solar_forecaster.solar_eval(x_dev, y_train)
 #%%
 #prediction
 # solar_forecaster.solar_predict(x_pred)
-sele
+selected_data.head()
