@@ -3,6 +3,8 @@ import os  #access files and so on
 import matplotlib
 import matplotlib.pyplot as plt
 from solarforecast import Solar
+import pandas as pd
+
 
 # =============================================================================
 # =============================================================================
@@ -16,7 +18,7 @@ data_files=resource.files
 selected_file=data_files[1]
 selected_data=resource.load_data(selected_file)
 #%%
-tt=resource.train_dev_test(selected_file)
+x_train,y_train,x_dev,y_dev,x_test,y_test=resource.train_dev_test(selected_file,train=0.9,dev=0.1,test=0.1)
 #%%
 
 print(selected_data.keys())
