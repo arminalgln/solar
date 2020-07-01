@@ -1,2 +1,2 @@
 from .readingdata import FileInf
-from .forecastmodel import Solar
+from .forecastmodel import SolarF

@@ -2,10 +2,11 @@ from solarforecast import FileInf
 import os  #access files and so on
 import matplotlib
 import matplotlib.pyplot as plt
-from solarforecast import Solar
+from solarforecast import SolarF
 import pandas as pd
 
 
+#%%
 # =============================================================================
 # =============================================================================
 # # select the data file needed
@@ -21,25 +22,23 @@ selected_data=resource.load_data(selected_file)
 x_train,y_train,x_dev,y_dev,x_test,y_test=resource.train_dev_test(selected_file,train=0.9,dev=0.1,test=0.1)
 #%%
 
-print(selected_data.keys())
-print(selected_data.head())
-#%%
-
 # =============================================================================
 # solar forecaster instance
 # =============================================================================
 # solar forcaster object
-solar_forecaster=Solar()
+solar_forecaster=SolarF()
 #define compile parameters
 solar_forecaster.opt_ls_mtr(optimizer='adam',
-                            loss='sparse_categorical_crossentropy',
-                            metric='sparse_categorical_accuracy')
+                            loss='mse',
+                            metric='mse')
 # #train
-solar_forecaster.train(x_train, y_train, batch=12, epoch=5) 
+#%%
+# y_train=y_train.reshape(327,48,1)
+solar_forecaster.train(x_train, y_train, batch=1, epoch=1) 
 #evaluation on train set
 solar_forecaster.solar_eval(x_train, y_train)
-#evaluation on dev set
-solar_forecaster.solar_eval(x_dev, y_train)
+# #evaluation on dev set
+# solar_forecaster.solar_eval(x_dev, y_train)
 
 
 #%%

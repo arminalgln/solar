@@ -7,21 +7,21 @@ from tensorflow.keras import layers
 # from tensorflow.keras.layers import Dense, Flatten, Conv2D
 from tensorflow.keras import Model
 import numpy as np
-class Solar():
+class SolarF:
     """
     This is a class for forecasting solar irrediation    
     """
     def __init__(self):
         self.model=model=self.__make_model()
+        
 
     # private funciton to make model
     def __make_model(self):
         model=keras.Sequential(
-            [
-                layers.Dense(32,activation='relu',name='dense_layer_1'),
-                layers.Dense(128,activation='relu',name='dense_layer_2'),
-                layers.Dense(128,activation='relu',name='dense_layer_3'),
-                layers.Dense(24,activation='relu',name='output'),
+            [   layers.Input(shape=(48,17)),
+                layers.LSTM(48,activation='relu',name='dense_layer_1'),
+                layers.Dense(48,name='dense_layer_2'),
+                # layers.Dense(48,activation='relu',name='output'),
                 ])
         return model
     
@@ -62,7 +62,12 @@ class Solar():
         Training calculation based on the **kwarg numbers
 
         """
+        
         batch,epoch=kwarg['batch'],kwarg['epoch']
+        # time_len,feature_num=kwarg['time_len'],kwarg['feature_num']
+        
+        inp=inp.reshape((len(inp),inp[0].shape[0],inp[0].shape[1]))
+        # model_input=layers.Input((time_len,feature_num))
         self.model.fit(
             inp,
             out,

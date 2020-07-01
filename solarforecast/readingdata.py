@@ -104,7 +104,7 @@ class FileInf():
         output_irradiations.index=same_index
         
         new_data=pd.concat([whole_features,output_irradiations],axis=1)
-        new_data=np.array_split(new_data,np.floor(data.shape[0]/48))
+        new_data=np.array_split(new_data,np.floor(data.shape[0]/48-1))
         
         #shuffle data with seed
         random.seed(4)
@@ -121,21 +121,27 @@ class FileInf():
         x_train=[]
         y_train=[]
         for i in train:
-            x_train.append(i.iloc[:,0:17])
-            y_train.append(i.iloc[:,17:])
-            
+            x_train.append(i.iloc[:,0:17].values)
+            y_train.append(i.iloc[:,17].values)
+        x_train=np.array(x_train)
+        y_train=np.array(y_train)
+        
+        
         x_dev=[]
         y_dev=[]
         for i in dev:
-            x_dev.append(i.iloc[:,0:17])
-            y_dev.append(i.iloc[:,17:])
+            x_dev.append(i.iloc[:,0:17].values)
+            y_dev.append(i.iloc[:,17:].values)
+        x_dev=np.array(x_dev)
+        y_dev=np.array(y_dev)
             
         x_test=[]
         y_test=[]
         for i in test:
-            x_test.append(i.iloc[:,0:17])
-            y_test.append(i.iloc[:,17:])
-        
+            x_test.append(i.iloc[:,0:17].values)
+            y_test.append(i.iloc[:,17:].values)
+        x_test=np.array(x_test)
+        y_test=np.array(y_test)
         
         tdt_output=[x_train,y_train,x_dev,y_dev,x_test,y_test]
 
