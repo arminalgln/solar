@@ -11,17 +11,20 @@ class SolarF:
     """
     This is a class for forecasting solar irrediation    
     """
-    def __init__(self):
+    def __init__(self,inp_num,resolution):
+        self.inp_num=inp_num
+        self.resolution=resolution
         self.model=model=self.__make_model()
         
 
     # private funciton to make model
     def __make_model(self):
         model=keras.Sequential(
-            [   layers.Input(shape=(48,17)),
-                layers.LSTM(48,activation='relu',name='dense_layer_1'),
-                layers.Dense(48,name='dense_layer_2'),
-                # layers.Dense(48,activation='relu',name='output'),
+            [   layers.Input(shape=(self.resolution,self.inp_num)),
+                layers.LSTM(120,activation='relu',name='dense_layer_1',return_sequences=True),
+                layers.LSTM(120,activation='relu',name='dense_layer_2'),
+                # layers.Dense(48,activation='relu',name='dense_layer_3'),
+                layers.Dense(self.resolution,name='output'),
                 ])
         return model
     
@@ -44,7 +47,8 @@ class SolarF:
             loss=keras.losses.get(ls),
             metrics=[keras.metrics.get(mtr)],
             )
-    
+        
+
     def train(self,inp,out,**kwarg):
         """
 
@@ -66,7 +70,7 @@ class SolarF:
         batch,epoch=kwarg['batch'],kwarg['epoch']
         # time_len,feature_num=kwarg['time_len'],kwarg['feature_num']
         
-        inp=inp.reshape((len(inp),inp[0].shape[0],inp[0].shape[1]))
+        inp=inp.reshape((inp.shape[0],self.resolution,self.inp_num))
         # model_input=layers.Input((time_len,feature_num))
         self.model.fit(
             inp,
@@ -92,10 +96,12 @@ class SolarF:
             evaluation.
 
         """
+        inp=inp.reshape((inp.shape[0],self.resolution,self.inp_num))
+
         return self.model.evaluate(inp,out)
     
     
-    def solar_predict(self,x_pred):
+    def solar_predict(self,inp):
         """
         
         Parameters
@@ -109,5 +115,7 @@ class SolarF:
             predicted solar irrediation.
 
         """
-        return self.model.predict(x_pred)
+        inp=inp.reshape((inp.shape[0],self.resolution,self.inp_num))
+
+        return self.model.predict(inp)
     

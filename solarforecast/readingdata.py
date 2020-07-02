@@ -7,6 +7,9 @@ import sys #for handleing exceptions
 import re #for checking letter in a string
 import numpy as np
 import random
+from sklearn import preprocessing
+from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import MinMaxScaler
 
 
 class FileInf():
@@ -47,12 +50,14 @@ class FileInf():
                 with open(filepath) as fd:
                     headers = [ next(fd) for i in range(2) ]
                     df = pd.read_csv(fd)
+                    self.data=df
         except:
             print("Oops!", sys.exc_info()[0], "occurred.")
         
         return df
     
-    def train_dev_test(self,file,**kwarg):
+    
+    def train_dev_test(self,file,features,output_f,resolution,**kwarg):
         """
         
 
@@ -72,18 +77,26 @@ class FileInf():
         train_chunk,dev_chunk,test_chunk=kwarg['train'],kwarg['dev'],kwarg['test']
         
         data=self.load_data(self.file)
-            
+        k=data.keys()
+        
+        # data[k] = StandardScaler().fit_transform(data[k])            
+        scaler = MinMaxScaler() 
+        scaled_values = scaler.fit_transform(data) 
+        data.loc[:,:] = scaled_values
         #irrediaction features for today
+        
+        
+        
         feature_irradiations=data[['Clearsky DHI','Clearsky DNI','Clearsky GHI',
-                      'DHI','DNI','GHI']].iloc[0:(data.shape[0]-48)]
+                      'DHI','DNI','GHI']].iloc[0:(data.shape[0]-resolution)]
 
         #features are for tomorrow 
         feature_weather=data[[ 'Temperature','Cloud Type', 'Dew Point',
                'Fill Flag', 'Relative Humidity', 'Solar Zenith Angle',
                'Surface Albedo', 'Pressure', 'Precipitable Water', 'Wind Direction',
-           'Wind Speed']].iloc[48:(data.shape[0])]
+           'Wind Speed']].iloc[resolution:(data.shape[0])]
         
-        same_index=np.array(range(0,data.shape[0]-48))
+        same_index=np.array(range(0,data.shape[0]-resolution))
         
         feature_irradiations.index=same_index
         feature_weather.index=same_index
@@ -92,7 +105,7 @@ class FileInf():
         
         #should be forecasted
         output_irradiations=data[['Clearsky DHI','Clearsky DNI','Clearsky GHI',
-                      'DHI','DNI','GHI']].iloc[48:(data.shape[0])]
+                      'DHI','DNI','GHI']].iloc[resolution:(data.shape[0])]
         old_columns=[]
         new_columns=[]
         for i in output_irradiations:
@@ -104,7 +117,9 @@ class FileInf():
         output_irradiations.index=same_index
         
         new_data=pd.concat([whole_features,output_irradiations],axis=1)
-        new_data=np.array_split(new_data,np.floor(data.shape[0]/48-1))
+        new_data=np.array_split(new_data,np.floor(data.shape[0]/resolution-1))#one day shift for prediciton 
+        
+        
         
         #shuffle data with seed
         random.seed(4)
@@ -121,8 +136,8 @@ class FileInf():
         x_train=[]
         y_train=[]
         for i in train:
-            x_train.append(i.iloc[:,0:17].values)
-            y_train.append(i.iloc[:,17].values)
+            x_train.append(i.loc[:,features].values)
+            y_train.append(i.loc[:,output_f].values)
         x_train=np.array(x_train)
         y_train=np.array(y_train)
         
@@ -130,20 +145,23 @@ class FileInf():
         x_dev=[]
         y_dev=[]
         for i in dev:
-            x_dev.append(i.iloc[:,0:17].values)
-            y_dev.append(i.iloc[:,17:].values)
+            x_dev.append(i.loc[:,features].values)
+            y_dev.append(i.loc[:,output_f].values)
         x_dev=np.array(x_dev)
         y_dev=np.array(y_dev)
             
         x_test=[]
         y_test=[]
         for i in test:
-            x_test.append(i.iloc[:,0:17].values)
-            y_test.append(i.iloc[:,17:].values)
+            x_test.append(i.loc[:,features].values)
+            y_test.append(i.loc[:,output_f].values)
         x_test=np.array(x_test)
         y_test=np.array(y_test)
         
         tdt_output=[x_train,y_train,x_dev,y_dev,x_test,y_test]
+        
+        
+            
 
         return tdt_output
     

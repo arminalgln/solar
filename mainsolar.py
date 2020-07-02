@@ -19,14 +19,44 @@ data_files=resource.files
 selected_file=data_files[1]
 selected_data=resource.load_data(selected_file)
 #%%
-x_train,y_train,x_dev,y_dev,x_test,y_test=resource.train_dev_test(selected_file,train=0.9,dev=0.1,test=0.1)
+
+# =============================================================================
+# input and output selection
+# =============================================================================
+features=['Clearsky DHI','Clearsky DNI','Clearsky GHI',
+          'DHI','DNI','GHI', 'Temperature','Cloud Type', 'Dew Point',
+          'Fill Flag', 'Relative Humidity', 'Solar Zenith Angle',
+          'Surface Albedo', 'Pressure', 'Precipitable Water', 'Wind Direction',
+          'Wind Speed']
+
+selected_features=['Clearsky DNI','DNI','Cloud Type','Temperature','Wind Speed']
+###############################################################################
+
+outputs=['Clearsky DHI tmrw','Clearsky DNI tmrw','Clearsky GHI tmrw',
+                      'DHI tmrw','DNI tmrw','GHI tmrw']
+selected_output=['DNI tmrw']
+###############################################################################
+feature_numbers=len(selected_features)
+
+# output_numbers=len(selected_output)
+
+# sample_number=x_train.shape[0]
+# sample_length=x_train.shape[1]
+resolution=48
+
+
+
+x_train,y_train,x_dev,y_dev,x_test,y_test=resource.train_dev_test(selected_file,
+                            selected_features,selected_output, resolution
+                            ,train=0.9,dev=0.1,test=0.1)
 #%%
 
 # =============================================================================
 # solar forecaster instance
 # =============================================================================
 # solar forcaster object
-solar_forecaster=SolarF()
+
+solar_forecaster=SolarF(feature_numbers,resolution)
 #define compile parameters
 solar_forecaster.opt_ls_mtr(optimizer='adam',
                             loss='mse',
@@ -34,14 +64,21 @@ solar_forecaster.opt_ls_mtr(optimizer='adam',
 # #train
 #%%
 # y_train=y_train.reshape(327,48,1)
-solar_forecaster.train(x_train, y_train, batch=1, epoch=1) 
+solar_forecaster.train(x_train, y_train, batch=10, epoch=50) 
 #evaluation on train set
 solar_forecaster.solar_eval(x_train, y_train)
 # #evaluation on dev set
-# solar_forecaster.solar_eval(x_dev, y_train)
+#%%
+solar_forecaster.solar_eval(x_train, y_train)
 
 
 #%%
 #prediction
-# solar_forecaster.solar_predict(x_pred)
-selected_data.head()
+pred=solar_forecaster.solar_predict(x_train)
+for i,k in enumerate(pred[0:50]):
+    # print(i[30])
+    # plt.plot(x_train[i])
+    plt.plot(y_train[i])
+    plt.plot(pred[i])
+    plt.show()
+# selected_data.head()
