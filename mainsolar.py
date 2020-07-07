@@ -65,7 +65,7 @@ solar_forecaster.opt_ls_mtr(optimizer='adam',
 # #train
 #%%
 # y_train=y_train.reshape(327,48,1)
-solar_forecaster.train(x_train, y_train, batch=10, epoch=50) 
+solar_forecaster.train(x_train, y_train, batch=10, epoch=5) 
 #evaluation on train set
 solar_forecaster.solar_eval(x_train, y_train)
 # #evaluation on dev set
