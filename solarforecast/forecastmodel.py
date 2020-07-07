@@ -21,10 +21,10 @@ class SolarF:
     def __make_model(self):
         model=keras.Sequential(
             [   layers.Input(shape=(self.resolution,self.inp_num)),
-                layers.LSTM(120,activation='relu',name='dense_layer_1',return_sequences=True),
-                layers.LSTM(120,activation='relu',name='dense_layer_2'),
+                layers.LSTM(120,activation='relu',name='lstm_1',return_sequences=True),
+                layers.LSTM(120,activation='relu',name='lstm_2'),
                 # layers.Dense(48,activation='relu',name='dense_layer_3'),
-                layers.Dense(self.resolution,name='output'),
+                layers.Dense(self.resolution,activation='relu',name='output'),
                 ])
         return model
     
