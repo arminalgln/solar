@@ -38,3 +38,4 @@ historical=get_historical(location_key)
 #%%
 for i in historical:
     print(i['CloudCover'])
+#%%
