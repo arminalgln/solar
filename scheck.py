@@ -73,18 +73,30 @@ etap_jul=main_data[5].loc[(main_data[5]['t']>start_date) & (main_data[5]['t']<en
 
 
 
-plt.plot(list((etap_solar_jul['Avg']-etap_solar_jul['Avg'].mean())/(etap_solar_jul['Avg'].max()-etap_solar_jul['Avg'].min())))
+# plt.plot(list((etap_jul['Avg']-etap_jul['Avg'].mean())/(etap_jul['Avg'].max()-etap_jul['Avg'].min())))
 # plt.show()
 plt.plot(list((july['Ghi']-july['Ghi'].mean())/(july['Ghi'].max()-july['Ghi'].min())))
 
+etap_solar=etap_weather[5]['381 (WeatherStation - WeatherStation - SolarRadiation)']
+etap_solar_jul=etap_solar.loc[(etap_solar['t']>start_date) & (etap_solar['t']<end_date)]
+
+plt.plot(list((etap_solar_jul['Avg']-etap_solar_jul['Avg'].mean())/(etap_solar_jul['Avg'].max()-etap_solar_jul['Avg'].min())))
+# plt.plot(list(july['Ghi']))
+
+plt.legend(['historical','etap irr'])
 #%%
 
+plt.plot(july['Ghi'])
+#%%
 july=historical.loc[(historical['t']>start_date) & (historical['t']<end_date)]
 etap_solar=etap_weather[5]['381 (WeatherStation - WeatherStation - SolarRadiation)']
 etap_solar_jul=etap_solar.loc[(etap_solar['t']>start_date) & (etap_solar['t']<end_date)]
 
 plt.plot(list(etap_solar_jul['Avg']))
 plt.plot(list(july['Ghi']))
+# plt.plot(list(etap_jul['Avg']*10000))
+# plt.plot(list(july['CloudOpacity']*10))
+# plt.plot(list(etap_temp_jul['Avg']*10))
 # plt.plot(list(july['Dni']))
 # plt.plot(list(july['Dhi']))
 # plt.plot(list(july['Ebh']))
@@ -102,11 +114,6 @@ etap_temp_jul=etap_temp.loc[(etap_temp['t']>start_date) & (etap_temp['t']<end_da
 
 plt.plot(list(etap_temp_jul['Avg']))
 plt.plot(list(C2F(july['AirTemp'])))
-# plt.plot(list(july['Dni']))
-# plt.plot(list(july['Dhi']))
-# plt.plot(list(july['Ebh']))
-
-# plt.legend(['etap','Ghi','Dni', 'Dhi', 'Ebh'])
 
 
 
