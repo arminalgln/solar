@@ -114,6 +114,8 @@ etap_temp_jul=etap_temp.loc[(etap_temp['t']>start_date) & (etap_temp['t']<end_da
 
 plt.plot(list(etap_temp_jul['Avg']))
 plt.plot(list(C2F(july['AirTemp'])))
+#%%%
+
 
 
 

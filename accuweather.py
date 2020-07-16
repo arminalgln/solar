@@ -34,8 +34,7 @@ def get_historical(location_key):
     return data
 location_key=get_location(country_code, city)
 # data=get_forecast(location_key)
-historical=get_historical(location_key)
+historicalacc=pd.DataFrame(get_historical(location_key))
 #%%
-for i in historical:
-    print(i['CloudCover'])
+plt.plot(historicalacc['CloudCover'])
 #%%

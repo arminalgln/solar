@@ -25,11 +25,28 @@ lat,lng=geo['lat'],geo['lng']
 solcast_API_key='osmO54Z_7TKYMgJFi3vrQenczYLbErBk'
 
 radiation_forecasts = solcast.get_radiation_forecasts(lat, lng, solcast_API_key)
-
-radiation_forecasts_data=radiation_forecasts.forecasts
-
+radiation_forecasts_data=pd.DataFrame(radiation_forecasts.forecasts)
 
 
+radiation_actuals = solcast.RadiationEstimatedActuals(lat, lng, solcast_API_key)
+radiation_actuals_data=pd.DataFrame(radiation_forecasts_actuals.estimated_actuals)
+#%%
+# =============================================================================
+# load historical data solcast
+# =============================================================================
+historical=pd.read_csv('data/solcast_etap_historical.csv')
+historical .keys()
+
+
+
+
+#%%
+plt.plot(radiation_forecasts_data['cloud_opacity'])
+# plt.plot(radiation_forecasts_data['ghi90'])
+# plt.plot(radiation_forecasts_data['ghi10'])
+plt.plot(radiation_actuals_data['cloud_opacity'])
+plt.legend(['scenario','actual'])
+plt.show()
 
 
 
