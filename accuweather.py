@@ -20,12 +20,6 @@ def get_location(country_code,city):
     return data[0]['Key']
     # print(location_key)
     
-    
-# def get_forecast(location_key):
-#     12_daily_forecast="http://dataservice.accuweather.com/forecasts/v1/hourly/12hour/"+location_key+"?apikey=f7p6tZSmiDE0F4xF0nLMH44qGJYSJhY7&details=true"
-#     with urllib.request.urlopen(12_daily_forecast) as 12_daily_forecast:
-#         data=json.loads(12_daily_forecast.read().decode())
-#     return data
 
 def get_historical(location_key):
     historical="http://dataservice.accuweather.com/currentconditions/v1/"+location_key+"/historical/24?apikey=f7p6tZSmiDE0F4xF0nLMH44qGJYSJhY7&details=true"

@@ -1,9 +1,36 @@
+import importlib
+import solarforecast
+solarforecast = importlib.reload(solarforecast)
 from solarforecast import FileInf
+from solarforecast import SolcastData
+from solarforecast import EtapData
 import os  #access files and so on
 import matplotlib
 import matplotlib.pyplot as plt
 from solarforecast import SolarF
 import pandas as pd
+import datetime
+import time
+from time import sleep
+import schedule
+#%%
+%reload_ext solarforecast
+
+etap_power=EtapData()
+
+#%%
+forecasted_features = ['Ghi', 'Ghi90', 'Ghi10', 'Ebh', 'Dni', 'Dni10', 'Dni90', 'Dhi',
+       'air_temp', 'Zenith', 'Azimuth', 'cloud_opacity', 'period_end',
+       'Period']
+historical_features = ['PeriodEnd', 'PeriodStart', 'Period', 'AirTemp', 'AlbedoDaily',
+       'Azimuth', 'CloudOpacity', 'DewpointTemp', 'Dhi', 'Dni', 'Ebh', 'Ghi',
+       'PrecipitableWater', 'RelativeHumidity', 'SnowDepth', 'SurfacePressure',
+       'WindDirection10m', 'WindSpeed10m', 'Zenith']
+
+whole_training_features = ['Ghi', 'Ebh', 'Dni', 'Dhi', 'air_tmp', 'cloud_opacity'] #for today which will predict tomorrow
+output_feature = ['PV_power']#for the next day power generation
+
+# sheet1, sheet2 = None, None
 
 
 #%%
@@ -12,6 +39,9 @@ import pandas as pd
 # # select the data file needed
 # =============================================================================
 # =============================================================================
+
+
+
 main_data_directory=os.path.join(os.getcwd(),"data")
 resource=FileInf(main_data_directory)
 data_files=resource.files
@@ -49,7 +79,7 @@ resolution=48
 
 x_train,y_train,x_dev,y_dev,x_test,y_test=resource.train_dev_test(selected_file,
                             selected_features,selected_output, resolution
-                            ,train=0.8,dev=0.1,test=0.1)
+                            , train=0.8, dev=0.1, test=0.1)
 #%%
 
 # =============================================================================
@@ -77,8 +107,8 @@ solar_forecaster.solar_eval(x_test, y_test)
 
 #%%
 #prediction
-pred=solar_forecaster.solar_predict(x_test)
-for i,k in enumerate(pred):
+pred = solar_forecaster.solar_predict(x_test)
+for i, k in enumerate(pred):
     # print(i[30])
     # plt.plot(x_train[i])
     plt.plot(y_test[i])

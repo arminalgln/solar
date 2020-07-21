@@ -2,18 +2,121 @@
 # Liberaries
 # =============================================================================
 import pandas as pd
-import os  #access files and so on
-import sys #for handleing exceptions
-import re #for checking letter in a string
+import os  # access files and so on
+import sys  # for handling exceptions
+import re  # for checking letter in a string
 import numpy as np
 import random
+# import datetime
+import xlrd
 from sklearn import preprocessing
 from sklearn.preprocessing import StandardScaler
 from sklearn.preprocessing import MinMaxScaler
+import solcast
+from opencage.geocoder import OpenCageGeocode
+import datetime
 
 
-class FileInf():
+class EtapData:
+
+    def __init__(self):
+        self.features = ['Avg', 't']
+        self.data = self.__clean_data()
+
+    def __get_data(self):
+        etap_power = {}
+        with pd.ExcelFile(r'data/etap_power.xls') as reader:
+            for i, k in enumerate(reader.sheet_names):
+                etap_power[i] = pd.read_excel(reader, sheet_name=k, header=1)
+
+        # timestamp
+
+        selected_output=pd.DataFrame(columns=self.features)
+        for i in etap_power:
+            new_time = []
+            if 'Time' in etap_power[i]:
+                for ind, j in enumerate(etap_power[i]['Time']):
+                    date = datetime.datetime.strptime(j, '%m/%d/%Y %I:%M:%S %p')
+                    ts = datetime.datetime.timestamp(date)
+                    new_time.append(ts)
+            etap_power[i]['t'] = new_time
+            if not i == 0:
+                # print(i)
+                selected_output = selected_output.append(etap_power[i][self.features], ignore_index=True)
+        return selected_output
+
+    def __clean_data(self):
+        data = self.__get_data()
+        data = data.sort_values('t')
+        data = data.reset_index()
+        del data['index']
+        t_index=[]
+        for i, t in enumerate(data['t']):
+            if datetime.datetime.utcfromtimestamp(t).hour == 0:
+                t_index.append(t)
+
+        sectionized_data={}
+        for i, t in enumerate(t_index):
+            if i < len(t_index)-1:
+                start = t
+                end = t_index[i+1]
+                part = data.loc[(data['t'] >= start) & (data['t'] < end)]
+                if part.shape[0] == 24:
+                    sectionized_data[t] = part
+
+        return sectionized_data
+
+
+
+
+
+
+class SolcastData:
     
+    def __init__(self, location_api_key, solcast_api_key, address):
+        self.location_api_key = location_api_key
+        self.solcast_api_key = solcast_api_key
+        self.address = address
+
+    def __get_address_lat_lng(self):
+        geocoder = OpenCageGeocode(self.location_api_key)
+        self.whole_location_info = geocoder.geocode(self.address)[0]
+        geo = self.whole_location_info['geometry']
+        lat,  lng = geo['lat'], geo['lng']
+        self.lat = lat
+        self.lng = lng
+# location_api_key='23e6edd3ccc7437b90c589fd7c9c6213'
+
+    def get_solcast_forecast(self):
+        # solcast_API_key='osmO54Z_7TKYMgJFi3vrQenczYLbErBk'
+        self.__get_address_lat_lng()
+        radiation_forecasts = solcast.RadiationForecasts(self.lat, self.lng, self.solcast_api_key)
+        self.forecasts_data=pd.DataFrame(radiation_forecasts.forecasts)
+        radiation_actuals = solcast.RadiationEstimatedActuals(self.lat, self.lng, self.solcast_api_key)
+        self.actuals_data=pd.DataFrame(radiation_actuals.estimated_actuals)
+        self.__local_time()
+
+    def __local_time(self):
+        #timezonefinder and get append UNIX time as well
+        temp_time=[]
+        desired_tz=self.whole_location_info['annotations']['timezone']['name']
+        def utc_to_local(utc_dt):
+            return utc_dt.replace(tzinfo=datetime.timezone.utc).astimezone(tz=desired_tz)
+        for t in self.actuals_data['period_end']:
+            temp_time.append(utc_to_local(t))
+        
+        self.actuals_data['local_time']=temp_time
+        
+        temp_time=[]
+        desired_tz=self.whole_location_info['annotations']['timezone']['name']
+        def utc_to_local(utc_dt):
+            return utc_dt.replace(tzinfo=datetime.timezone.utc).astimezone(tz=desired_tz)
+        for t in self.forecasts_data['period_end']:
+            temp_time.append(utc_to_local(t))
+        
+        self.forecasts_data['local_time']=temp_time
+        
+class FileInf():
     def __init__(self,directory):
         self.dir=directory
         self.files=os.listdir(self.dir)
@@ -30,7 +133,6 @@ class FileInf():
         -------
         df : pd.Datafframe
             dataset for the selected file.
-
         """
         print(file)
         self.file=file

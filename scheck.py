@@ -1,32 +1,33 @@
 import pandas as pd
 import numpy as np
 import matplotlib
-import matplotlib.pyplot as plt
+import matplotlib.pyp1lot as plt
 import datetime
 #%%
 
 # sheet1, sheet2 = None, None
-main_data={}
-with pd.ExcelFile(r'data/Solar-MW.xls') as reader:
+etap_power={}
+with pd.ExcelFile(r'data/etap_power.xls') as reader:
     for i,k in enumerate(reader.sheet_names):
-        main_data[i]=pd.read_excel(reader, sheet_name=k,header=1)
+        etap_power[i]=pd.read_excel(reader, sheet_name=k,header=1)
         
 
 etap_weather={}
-with pd.ExcelFile(r'data/Solar-Weather.xls') as reader:
+with pd.ExcelFile(r'data/etap_weather.xls') as reader:
     for i,k in enumerate(reader.sheet_names):
         etap_weather[i]=pd.read_excel(reader, sheet_name=k, header=[0,1])
 
 #%%
 #timestamp
-for i in main_data:
+for i in etap_power:
     new_time=[]
-    if 'Time' in main_data[i]:
-        for ind,j in enumerate(main_data[i]['Time']):
+    if 'Time' in etap_power[i]:
+        for ind,j in enumerate(etap_power[i]['Time']):
             date = datetime.datetime.strptime(j, '%m/%d/%Y %I:%M:%S %p')
             ts = datetime.datetime.timestamp(date)
             new_time.append(ts)
-    main_data[i]['t']=new_time
+    etap_power[i]['t']=new_time
+
     
 #%%
 for i in etap_weather:
@@ -40,6 +41,10 @@ for i in etap_weather:
                 new_time.append(ts)
             for key in etap_weather[i].keys().get_level_values(0).unique():
                 etap_weather[i][key,'t']=new_time
+#%%
+
+
+
 
 #%%
 forecast=pd.read_csv('data/GetWeatherSiteForecast.csv')
