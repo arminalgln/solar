@@ -7,7 +7,7 @@ import sys  # for handling exceptions
 import re  # for checking letter in a string
 import numpy as np
 import random
-# import datetime
+import time
 import xlrd
 from sklearn import preprocessing
 from sklearn.preprocessing import StandardScaler
@@ -15,23 +15,25 @@ from sklearn.preprocessing import MinMaxScaler
 import solcast
 from opencage.geocoder import OpenCageGeocode
 import datetime
+import math
 
 
 class EtapData:
 
-    def __init__(self):
+    def __init__(self, training_percentage):
         self.features = ['Avg', 't']
-        self.data = self.__clean_data()
+        self.train_chunk = training_percentage
+        self.train_data, self.test_data = self.__train_test_data()
 
     def __get_data(self):
+
         etap_power = {}
         with pd.ExcelFile(r'data/etap_power.xls') as reader:
             for i, k in enumerate(reader.sheet_names):
                 etap_power[i] = pd.read_excel(reader, sheet_name=k, header=1)
 
         # timestamp
-
-        selected_output=pd.DataFrame(columns=self.features)
+        selected_output = pd.DataFrame(columns=self.features)
         for i in etap_power:
             new_time = []
             if 'Time' in etap_power[i]:
@@ -52,10 +54,13 @@ class EtapData:
         del data['index']
         t_index=[]
         for i, t in enumerate(data['t']):
-            if datetime.datetime.utcfromtimestamp(t).hour == 0:
+            # if datetime.datetime.utcfromtimestamp(t).hour == 7:
+            #     t_index.append(t)
+            if time.localtime(t).tm_hour == 0:
                 t_index.append(t)
 
-        sectionized_data={}
+        sectionized_data = {}
+        count = 0
         for i, t in enumerate(t_index):
             if i < len(t_index)-1:
                 start = t
@@ -63,15 +68,66 @@ class EtapData:
                 part = data.loc[(data['t'] >= start) & (data['t'] < end)]
                 if part.shape[0] == 24:
                     sectionized_data[t] = part
-
+                    count += 1
         return sectionized_data
 
+    def __train_test_data(self):
+        clean_data = self.__clean_data()
+        data_indexes = list(clean_data.keys())
+        train_sample_numbers = math.floor(self.train_chunk * len(data_indexes))
+        randomized_index = random.sample(data_indexes, train_sample_numbers)
+        train_data = {i:clean_data.get(i) for i in randomized_index}
+        test_index = [item for item in data_indexes if item not in randomized_index]
+        test_data = {i:clean_data.get(i) for i in test_index}
+
+        return train_data, test_data
+
+class SolcastHistorical:
+    def __init__(self, dst, train_index, test_index):
+        self.train_index = train_index
+        self.test_index = test_index
+        self.dst = dst
+        self.train,  self.test = self.__train_test_historical()
+
+    def __time_add(self):
+        historical = pd.read_csv(self.dst)
+        ts = []
+        for i in historical['PeriodEnd']:
+            date = datetime.datetime.strptime(i, '%Y-%m-%dT%H:%M:%SZ')
+            t = datetime.datetime.timestamp(date) - 7 * 3600  # Irvine to UTC difference
+            ts.append(int(t))
+        historical['t'] = ts
+        return historical
+
+    def __train_test_historical(self):
+
+        historical = self.__time_add()
+
+        train = {}
+        count = 0
+        for i, t in enumerate(self.train_index):
+            start = t
+            end = start + 24 * 3600
+            part = historical.loc[(historical['t'] >= start) & (historical['t'] < end)]
+            if part.shape[0] == 24:
+                train[t] = part
+                count += 1
+        test = {}
+        count = 0
+        for i, t in enumerate(self.test_index):
+            start = t
+            end = start + 24 * 3600
+            part = historical.loc[(historical['t'] >= start) & (historical['t'] < end)]
+            if part.shape[0] == 24:
+                test[t] = part
+                count += 1
+
+        return train, test
 
 
 
 
-
-class SolcastData:
+class SolcastDataForecast:
     
     def __init__(self, location_api_key, solcast_api_key, address):
         self.location_api_key = location_api_key
@@ -100,22 +156,22 @@ class SolcastData:
         #timezonefinder and get append UNIX time as well
         temp_time=[]
         desired_tz=self.whole_location_info['annotations']['timezone']['name']
-        def utc_to_local(utc_dt):
+        def utc_to_local(utc_dt,desired_tz):
             return utc_dt.replace(tzinfo=datetime.timezone.utc).astimezone(tz=desired_tz)
         for t in self.actuals_data['period_end']:
-            temp_time.append(utc_to_local(t))
+            temp_time.append(utc_to_local(t,desired_tz))
         
         self.actuals_data['local_time']=temp_time
         
         temp_time=[]
         desired_tz=self.whole_location_info['annotations']['timezone']['name']
-        def utc_to_local(utc_dt):
-            return utc_dt.replace(tzinfo=datetime.timezone.utc).astimezone(tz=desired_tz)
         for t in self.forecasts_data['period_end']:
-            temp_time.append(utc_to_local(t))
+            temp_time.append(utc_to_local(t,desired_tz))
         
-        self.forecasts_data['local_time']=temp_time
-        
+        self.forecasts_data['local_time'] = temp_time
+
+
+
 class FileInf():
     def __init__(self,directory):
         self.dir=directory

@@ -7,28 +7,29 @@ from tensorflow.keras import layers
 # from tensorflow.keras.layers import Dense, Flatten, Conv2D
 from tensorflow.keras import Model
 import numpy as np
+
+
 class SolarF:
     """
     This is a class for forecasting solar irrediation    
     """
-    def __init__(self,inp_num,resolution):
-        self.inp_num=inp_num
-        self.resolution=resolution
-        self.model=model=self.__make_model()
-        
+
+    def __init__(self, inp_num, resolution):
+        self.inp_num = inp_num
+        self.resolution = resolution
+        self.model = self.__make_model()
 
     # private funciton to make model
     def __make_model(self):
-        model=keras.Sequential(
-            [   layers.Input(shape=(self.resolution,self.inp_num)),
-                layers.LSTM(120,activation='relu',name='lstm_1',return_sequences=True),
-                layers.LSTM(120,activation='relu',name='lstm_2'),
-                # layers.Dense(48,activation='relu',name='dense_layer_3'),
-                layers.Dense(self.resolution,activation='relu',name='output'),
-                ])
+        model = keras.Sequential(
+            [layers.InputLayer(input_shape=(self.resolution, self.inp_num)),
+             layers.LSTM(120, activation='relu', name='lstm_1', return_sequences=True),
+             layers.LSTM(120, activation='relu', name='lstm_2'),
+             layers.Dense(self.resolution, activation='relu', name='output'),
+             ])
         return model
-    
-    def opt_ls_mtr(self,**kwarg):
+
+    def opt_ls_mtr(self, **kwarg):
         """
 
         Parameters
@@ -39,17 +40,17 @@ class SolarF:
         Returns
         -------
         None.
+        :param kwarg:
 
         """
-        opt,ls,mtr=kwarg['optimizer'],kwarg['loss'],kwarg['metric']
+        opt, ls, mtr = kwarg['optimizer'], kwarg['loss'], kwarg['metric']
         self.model.compile(
             optimizer=keras.optimizers.get(opt),
             loss=keras.losses.get(ls),
             metrics=[keras.metrics.get(mtr)],
-            )
-        
+        )
 
-    def train(self,inp,out,**kwarg):
+    def train(self, inp, out, **kwarg):
         """
 
         Parameters
@@ -66,21 +67,20 @@ class SolarF:
         Training calculation based on the **kwarg numbers
 
         """
-        
-        batch,epoch=kwarg['batch'],kwarg['epoch']
+
+        batch, epoch = kwarg['batch'], kwarg['epoch']
         # time_len,feature_num=kwarg['time_len'],kwarg['feature_num']
-        
-        inp=inp.reshape((inp.shape[0],self.resolution,self.inp_num))
+
+        inp = inp.reshape((inp.shape[0], self.resolution, self.inp_num))
         # model_input=layers.Input((time_len,feature_num))
         self.model.fit(
             inp,
             out,
             batch_size=batch,
             epochs=epoch
-            )
-    
-    
-    def solar_eval(self,inp,out):
+        )
+
+    def solar_eval(self, inp, out):
         """
 
         Parameters
@@ -96,12 +96,11 @@ class SolarF:
             evaluation.
 
         """
-        inp=inp.reshape((inp.shape[0],self.resolution,self.inp_num))
+        inp = inp.reshape((inp.shape[0], self.resolution, self.inp_num))
 
-        return self.model.evaluate(inp,out)
-    
-    
-    def solar_predict(self,inp):
+        return self.model.evaluate(inp, out)
+
+    def solar_predict(self, inp):
         """
         
         Parameters
@@ -115,7 +114,6 @@ class SolarF:
             predicted solar irrediation.
 
         """
-        inp=inp.reshape((inp.shape[0],self.resolution,self.inp_num))
+        inp = inp.reshape((inp.shape[0], self.resolution, self.inp_num))
 
         return self.model.predict(inp)
-    

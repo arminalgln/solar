@@ -54,7 +54,7 @@ historical=pd.read_csv('data/hist.csv')
 ts=[]
 for i in historical['PeriodEnd']:
     date = datetime.datetime.strptime(i, '%Y-%m-%dT%H:%M:%SZ')
-    t=datetime.datetime.timestamp(date)-7*3600
+    t = datetime.datetime.timestamp(date)-7*3600
     ts.append(t)
 
 historical['t']=ts
