@@ -2,11 +2,14 @@
 # class for model
 # =============================================================================
 import tensorflow as tf
-from tensorflow import keras
-from tensorflow.keras import layers
+# from tensorflow import keras
+# from tensorflow.keras import layers
 # from tensorflow.keras.layers import Dense, Flatten, Conv2D
-from tensorflow.keras import Model
+# from tensorflow.keras import Model
 import numpy as np
+import keras
+from keras import layers
+# from keras.layers import
 
 
 class SolarF:
@@ -22,7 +25,7 @@ class SolarF:
     # private funciton to make model
     def __make_model(self):
         model = keras.Sequential(
-            [layers.InputLayer(input_shape=(self.resolution, self.inp_num)),
+            [#keras.Input(shape=(self.resolution, self.inp_num,)),
              layers.LSTM(120, activation='relu', name='lstm_1', return_sequences=True),
              layers.LSTM(120, activation='relu', name='lstm_2'),
              layers.Dense(self.resolution, activation='relu', name='output'),

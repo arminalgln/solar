@@ -16,16 +16,6 @@ import time
 from time import sleep
 import schedule
 #%%
-%reload_ext solarforecast
-
-etap_power=EtapData(0.9)
-train_times = etap_power.train_data.keys()
-test_times = etap_power.test_data.keys()
-#historical data from solcast
-dst='data/solcast_etap_historical.csv'
-hist = SolcastHistorical(dst, train_times, test_times)
-
-#%%
 forecasted_features = ['Ghi', 'Ghi90', 'Ghi10', 'Ebh', 'Dni', 'Dni10', 'Dni90', 'Dhi',
        'air_temp', 'Zenith', 'Azimuth', 'cloud_opacity', 'period_end',
        'Period']
@@ -37,69 +27,113 @@ historical_features = ['PeriodEnd', 'PeriodStart', 'Period', 'AirTemp', 'AlbedoD
 whole_training_features = ['Ghi', 'Ebh', 'Dni', 'Dhi', 'AirTemp', 'CloudOpacity'] #for today which will predict tomorrow
 output_feature = ['PV_power']#for the next day power generation
 
+%reload_ext solarforecast
+
+etap_power=EtapData(0.8)
+train_times = etap_power.train_data.keys()
+test_times = etap_power.test_data.keys()
+#historical data from solcast
+dst='data/solcast_etap_historical.csv'
+hist = SolcastHistorical(dst, train_times, test_times)
+
+#%%
+def train_test_by_features(selected_features, hist, etap_power):
+
+    train_features = []
+    train_label = []
+    for i in hist.train.keys():
+        selected_data = hist.train[i][selected_features]
+        train_features.append(selected_data.values)
+        train_label.append(etap_power.train_data[i]['Avg'].values)
+
+    train_features = np.array(train_features)
+    train_label = np.array(train_label)
+
+    test_features = []
+    test_label = []
+    for i in hist.test.keys():
+        selected_data = hist.test[i][selected_features]
+        test_features.append(selected_data.values)
+        test_label.append(etap_power.test_data[i]['Avg'].values)
+
+    test_features = np.array(test_features)
+    test_label = np.array(test_label)
+    #max min normalization
+    powermax = np.max(train_label)
+    powermin = np.min(train_label)
+
+    feature_max = train_features.max(axis=(1,0))
+    feature_min = train_features.min(axis=(1,0))
+
+    ##normalize
+    x_train = (train_features-feature_min)/(feature_max-feature_min)
+    x_test = (test_features-feature_min)/(feature_max-feature_min)
+
+    y_train = (train_label-powermin)/(powermax-powermin)
+    y_test = (test_label-powermin)/(powermax-powermin)
+
+    return x_train, x_test, y_train, y_test
+
+# def normaly(x):
+#     return [(i-min(x))/(max(x)-min(x)) for i in x]
+#
+# #%%
+# samples=range(2)
+# for sample in samples:
+#     plt.plot((x_train[sample][:,0]))
+#     plt.plot((y_train[sample]))
+#     plt.legend(['f','p'])
+#     plt.show(block=True)
+#     plt.interactive(False)
+
+#%%
 # select features for training
-selected_features = ['Ghi', 'Ebh', 'Dni', 'Dhi', 'AirTemp', 'CloudOpacity']
-feature_numbers=len(selected_features)
-resolution=24
+scenarios = {
+    'whole': ['Ghi', 'Ebh', 'Dni', 'Dhi', 'AirTemp', 'CloudOpacity'],
+    'radiations':['Ghi', 'Ebh', 'Dni', 'Dhi'],
+    'normal':['Ghi', 'AirTemp', 'CloudOpacity'],
+    'minimal':['Ghi', 'CloudOpacity'],
+    'Ghi':['Ghi']
+}
 
-train_features = []
-train_label = []
-for i in hist.train.keys():
-    selected_data = hist.train[i][selected_features]
-    train_features.append(selected_data.values)
-    train_label.append(etap_power.train_data[i]['Avg'].values)
+for sc in scenarios:
+    print(sc)
+    selected_features = scenarios[sc]
 
-train_features = np.array(train_features)
-train_label = np.array(train_label)
+    feature_numbers=len(selected_features)
+    resolution=24
+    x_train, x_test, y_train, y_test = train_test_by_features(selected_features, hist, etap_power)
+    solar_forecaster = SolarF(feature_numbers,resolution)
 
-test_features = []
-test_label = []
-for i in hist.test.keys():
-    selected_data = hist.test[i][selected_features]
-    test_features.append(selected_data.values)
-    test_label.append(etap_power.test_data[i]['Avg'].values)
+    solar_forecaster.opt_ls_mtr(optimizer='adam',
+                                loss='mse',
+                                metric='mse')
+# #train
 
-test_features = np.array(test_features)
-test_label = np.array(test_label)
-#%%
-#max min normalization
-powermax = np.max(train_label)
-powermin = np.min(train_label)
+    # y_train=y_train.reshape(327,48,1)
+    solar_forecaster.train(x_train, y_train, batch=1, epoch=100)
+    #evaluation on train set
+    solar_forecaster.solar_eval(x_train, y_train)
+    # #evaluation on dev set
 
-feature_max = train_features.max(axis=(1,0))
-feature_min = train_features.min(axis=(1,0))
+    solar_forecaster.solar_eval(x_train, y_train)
+    # solar_forecaster.solar_eval(x_dev, y_dev)
+    solar_forecaster.solar_eval(x_test, y_test)
 
-##normalize
-x_train = (train_features-feature_min)/(feature_max-feature_min)
-x_test = (test_features-feature_min)/(feature_max-feature_min)
+    solar_forecaster.model.save('models/'+sc)
 
-y_train = (train_label-powermin)/(powermax-powermin)
-y_test = (test_label-powermin)/(powermax-powermin)
 
 #%%
-def normaly(x):
-    return [(i-min(x))/(max(x)-min(x)) for i in x]
-
-#%%
-samples=range(2)
-for sample in samples:
-    plt.plot((x_train[sample][:,0]))
-    plt.plot((y_train[sample]))
-    plt.legend(['f','p'])
-    plt.show(block=True)
-    plt.interactive(False)
-
-#%%
-
+x_train, x_test, y_train, y_test = train_test_by_features(selected_features, hist, etap_power)
 solar_forecaster = SolarF(feature_numbers,resolution)
 
 solar_forecaster.opt_ls_mtr(optimizer='adam',
                             loss='mse',
                             metric='mse')
 # #train
-#%%
+
 # y_train=y_train.reshape(327,48,1)
-solar_forecaster.train(x_train, y_train, batch=1, epoch=100)
+solar_forecaster.train(x_train, y_train, batch=1, epoch=1)
 #evaluation on train set
 solar_forecaster.solar_eval(x_train, y_train)
 # #evaluation on dev set
@@ -108,7 +142,9 @@ solar_forecaster.solar_eval(x_train, y_train)
 # solar_forecaster.solar_eval(x_dev, y_dev)
 solar_forecaster.solar_eval(x_test, y_test)
 
+solar_forecaster.model.save('models/whole_features')
 
+#%%
 #prediction
 pred = solar_forecaster.solar_predict(x_test)
 for i, k in enumerate(pred):
@@ -120,8 +156,22 @@ for i, k in enumerate(pred):
     plt.show()
 # selected_data.head()
 
+#%%
+#saving keras model
+solar_forecaster.model.save('models/whole_features')
+#%%
+loaded=keras.models.load_model('models/whole_features')
+#%%
+import keras
+from keras.utils import CustomObjectScope
+from keras.initializers import glorot_uniform
 
+with CustomObjectScope({'GlorotUniform': glorot_uniform()}):
+    model = keras.models.load_model('models/whole_features.h5')
+    #%%
+import tensorflow as tf
 
+lo = tf.keras.models.load_model('models/whole_features')
 
 #%%
 # =============================================================================
@@ -185,7 +235,7 @@ solar_forecaster.opt_ls_mtr(optimizer='adam',
 # #train
 #%%
 # y_train=y_train.reshape(327,48,1)
-solar_forecaster.train(x_train, y_train, batch=10, epoch=5) 
+solar_forecaster.train(x_train, y_train, batch=5, epoch=5)
 #evaluation on train set
 solar_forecaster.solar_eval(x_train, y_train)
 # #evaluation on dev set
