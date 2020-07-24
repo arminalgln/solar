@@ -75,6 +75,7 @@ class EtapData:
         clean_data = self.__clean_data()
         data_indexes = list(clean_data.keys())
         train_sample_numbers = math.floor(self.train_chunk * len(data_indexes))
+        random.seed(4)
         randomized_index = random.sample(data_indexes, train_sample_numbers)
         train_data = {i:clean_data.get(i) for i in randomized_index}
         test_index = [item for item in data_indexes if item not in randomized_index]

@@ -10,6 +10,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 from solarforecast import SolarF
 import numpy as np
+import keras
 import pandas as pd
 import datetime
 import time
@@ -85,7 +86,13 @@ def train_test_by_features(selected_features, hist, etap_power):
 #     plt.legend(['f','p'])
 #     plt.show(block=True)
 #     plt.interactive(False)
-
+# MSE_of_scenarios = {
+#     'whole': 0.0012270294828340411,
+#     'radiations': 0.018972916528582573,
+#     'normal': 0.0009280733065679669,
+#     'minimal': 0.0010660196421667933,
+#     'Ghi': 0.0014592972584068775
+#     }
 #%%
 # select features for training
 scenarios = {
@@ -143,6 +150,36 @@ solar_forecaster.solar_eval(x_train, y_train)
 solar_forecaster.solar_eval(x_test, y_test)
 
 solar_forecaster.model.save('models/whole_features')
+
+#%%
+## loading model and compare their performance
+mses={}
+for sc in scenarios:
+    print(sc)
+    selected_features = scenarios[sc]
+
+    feature_numbers = len(selected_features)
+    resolution = 24
+    x_train, x_test, y_train, y_test = train_test_by_features(selected_features, hist, etap_power)
+
+    loaded_model = keras.models.load_model('models/'+sc)
+    print(loaded_model)
+    predicted = loaded_model.predict(x_test)
+    mse_error = loaded_model.evaluate(x_test, y_test)
+    print(mse_error)
+    mses[sc] = mse_error[0]
+    os.mkdir('models/figs/'+sc)
+    for i, k in enumerate(predicted):
+        print(i)
+        plt.plot(y_test[i])
+        plt.plot(predicted[i])
+        plt.legend(['real', 'pred'])
+        plt.savefig('models/figs/' + sc + '/' + str(i) + '.png')
+        plt.show()
+
+
+
+
 
 #%%
 #prediction
