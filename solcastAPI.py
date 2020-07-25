@@ -19,11 +19,11 @@ import schedule
 def saving_task():      
     address='17 goodyear, Irvine'
     if not address:
-        address=input('where is your site address?  ')
+        address = input('where is your site address?  ')
     location_api_key='23e6edd3ccc7437b90c589fd7c9c6213'
     solcast_API_key='osmO54Z_7TKYMgJFi3vrQenczYLbErBk'
     
-    temp_data=SolacastData(location_api_key,solcast_API_key,address)
+    temp_data = SolacastData(location_api_key,solcast_API_key,address)
     # temp_data.get_address_lat_lng()
     temp_data.get_solcast_forecast()
     day=temp_data.forecasts_data['local_time'][1].strftime("%Y-%m-%d")

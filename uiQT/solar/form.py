@@ -6,11 +6,29 @@
 #
 # WARNING! All changes made in this file will be lost!
 
-
+import importlib
+import solarforecast
+solarforecast = importlib.reload(solarforecast)
+from solarforecast import FileInf
+from solarforecast import SolcastHistorical
+from solarforecast import SolcastDataForecast
+from solarforecast import EtapData
+import os  #access files and so on
+import matplotlib
+import matplotlib.pyplot as plt
+from solarforecast import SolarF
+import numpy as np
+import keras
+import pandas as pd
+import datetime
+import time
+from time import sleep
+import schedule
 from PyQt5 import QtCore, QtGui, QtWidgets
 
 
 class Ui_solarUI(object):
+
     def setupUi(self, solarUI):
         solarUI.setObjectName("solarUI")
         solarUI.resize(800, 600)
@@ -39,10 +57,12 @@ class Ui_solarUI(object):
         self.Dni.setObjectName("Dni")
         self.temp = QtWidgets.QCheckBox(solarUI)
         self.temp.setGeometry(QtCore.QRect(30, 140, 81, 20))
-        self.temp.setObjectName("temp")
+        self.temp.setObjectName("AirTemp")
+        self.temp.setText("AirTemp")
         self.cloud = QtWidgets.QCheckBox(solarUI)
         self.cloud.setGeometry(QtCore.QRect(30, 170, 111, 20))
-        self.cloud.setObjectName("cloud")
+        self.cloud.setObjectName("CloudOpacity")
+        self.cloud.setText("CloudOpacity")
         self.tabWidget = QtWidgets.QTabWidget(solarUI)
         self.tabWidget.setGeometry(QtCore.QRect(330, 10, 451, 421))
         self.tabWidget.setObjectName("tabWidget")
@@ -72,8 +92,100 @@ class Ui_solarUI(object):
 
         self.retranslateUi(solarUI)
         self.tabWidget.setCurrentIndex(0)
-        self.forecast.clicked.connect(self.View.show)
+        self.forecast.clicked.connect(self.get_forecast)
         QtCore.QMetaObject.connectSlotsByName(solarUI)
+        app.processEvents()
+
+    def __define_features(self):
+        features = []
+        app.processEvents()
+        for i in self.__dict__:
+            temp = self.__dict__[i]
+            if isinstance(temp, QtWidgets.QCheckBox):
+                if temp.isChecked():
+                    if temp.text() == 'Air temp':
+                        temp.setText('AirTemp')
+                    if temp.text() == 'Cloud opacity':
+                        temp.setText('CloudOpacity')
+                    features.append(temp.text())
+        return features
+
+    def __load_whole_data(self):
+        etap_power = EtapData(0.8)
+        train_times = etap_power.train_data.keys()
+        test_times = etap_power.test_data.keys()
+        # historical data from solcast
+        dst = 'data/solcast_etap_historical.csv'
+        hist = SolcastHistorical(dst, train_times, test_times)
+        return etap_power ,hist
+
+    def __train_test_by_features(self, selected_features, hist, etap_power):
+
+        train_features = []
+        train_label = []
+        for i in hist.train.keys():
+            selected_data = hist.train[i][selected_features]
+            train_features.append(selected_data.values)
+            train_label.append(etap_power.train_data[i]['Avg'].values)
+
+        train_features = np.array(train_features)
+        train_label = np.array(train_label)
+
+        test_features = []
+        test_label = []
+        for i in hist.test.keys():
+            selected_data = hist.test[i][selected_features]
+            test_features.append(selected_data.values)
+            test_label.append(etap_power.test_data[i]['Avg'].values)
+
+        test_features = np.array(test_features)
+        test_label = np.array(test_label)
+        # max min normalization
+        powermax = np.max(train_label)
+        powermin = np.min(train_label)
+
+        feature_max = train_features.max(axis=(1, 0))
+        feature_min = train_features.min(axis=(1, 0))
+
+        ##normalize
+        x_train = (train_features - feature_min) / (feature_max - feature_min)
+        x_test = (test_features - feature_min) / (feature_max - feature_min)
+
+        y_train = (train_label - powermin) / (powermax - powermin)
+        y_test = (test_label - powermin) / (powermax - powermin)
+
+        return x_train, x_test, y_train, y_test
+
+
+    def get_forecast(self):
+        selected_features = self.__define_features()
+        etap_power, hist = self.__load_whole_data()
+        print(selected_features)
+        feature_numbers = len(selected_features)
+        resolution = 24
+        x_train, x_test, y_train, y_test = self.__train_test_by_features(selected_features, hist, etap_power)
+        solar_forecaster = SolarF(feature_numbers, resolution)
+
+        solar_forecaster.opt_ls_mtr(optimizer='adam',
+                                    loss='mse',
+                                    metric='mse')
+
+        solar_forecaster.train(x_train, y_train, batch=1, epoch=1)
+        # evaluation on train set
+        solar_forecaster.solar_eval(x_train, y_train)
+        # #evaluation on dev set
+
+        solar_forecaster.solar_eval(x_train, y_train)
+        # solar_forecaster.solar_eval(x_dev, y_dev)
+        solar_forecaster.solar_eval(x_test, y_test)
+
+        print(solar_forecaster.model.summary())
+        # solar_forecaster.model.save('models/' + sc)
+
+
+
+
+
 
     def retranslateUi(self, solarUI):
         _translate = QtCore.QCoreApplication.translate
@@ -86,12 +198,16 @@ class Ui_solarUI(object):
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.fview), _translate("solarUI", "Forecast Display"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_2), _translate("solarUI", "Tab 2"))
 
-
 if __name__ == "__main__":
     import sys
+
     app = QtWidgets.QApplication(sys.argv)
+    app.aboutToQuit.connect(app.deleteLater)
     solarUI = QtWidgets.QWidget()
     ui = Ui_solarUI()
     ui.setupUi(solarUI)
     solarUI.show()
-    sys.exit(app.exec_())
+    QtWidgets.QApplication.setQuitOnLastWindowClosed(True)
+    app.exec_()
+    app.quit()
+
