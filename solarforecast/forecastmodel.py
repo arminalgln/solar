@@ -27,7 +27,7 @@ class SolarF:
         model = keras.Sequential(
             [#keras.Input(shape=(self.resolution, self.inp_num,)),
              layers.LSTM(120, activation='relu', name='lstm_1', return_sequences=True),
-             layers.LSTM(120, activation='relu', name='lstm_2'),
+             layers.LSTM(120,  activation='relu', name='lstm_2'),
              layers.Dense(self.resolution, activation='relu', name='output'),
              ])
         return model

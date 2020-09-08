@@ -16,7 +16,23 @@ import datetime
 import time
 from time import sleep
 import schedule
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+
 #%%
+#%%
+####################################################
+####################################################
+####################################################
+"""
+
+Solar forecasting
+
+"""
+####################################################
+####################################################
+####################################################
+#%%
+
 forecasted_features = ['Ghi', 'Ghi90', 'Ghi10', 'Ebh', 'Dni', 'Dni10', 'Dni90', 'Dhi',
        'air_temp', 'Zenith', 'Azimuth', 'cloud_opacity', 'period_end',
        'Period']
@@ -127,10 +143,20 @@ for sc in scenarios:
     # solar_forecaster.solar_eval(x_dev, y_dev)
     solar_forecaster.solar_eval(x_test, y_test)
 
-    solar_forecaster.model.save('models/'+sc)
+    # solar_forecaster.model.save('models/'+sc)
 
 
 #%%
+feature_numbers=3
+resolution=24
+scenarios = {
+    'whole': ['Ghi', 'Ebh', 'Dni', 'Dhi', 'AirTemp', 'CloudOpacity'],
+    'radiations':['Ghi', 'Ebh', 'Dni', 'Dhi'],
+    'normal':['Ghi', 'AirTemp', 'CloudOpacity'],
+    'minimal':['Ghi', 'CloudOpacity'],
+    'Ghi':['Ghi']
+}
+selected_features = scenarios['normal']
 x_train, x_test, y_train, y_test = train_test_by_features(selected_features, hist, etap_power)
 solar_forecaster = SolarF(feature_numbers,resolution)
 
@@ -140,7 +166,7 @@ solar_forecaster.opt_ls_mtr(optimizer='adam',
 # #train
 
 # y_train=y_train.reshape(327,48,1)
-solar_forecaster.train(x_train, y_train, batch=1, epoch=1)
+solar_forecaster.train(x_train, y_train, batch=10, epoch=50)
 #evaluation on train set
 solar_forecaster.solar_eval(x_train, y_train)
 # #evaluation on dev set
@@ -149,33 +175,42 @@ solar_forecaster.solar_eval(x_train, y_train)
 # solar_forecaster.solar_eval(x_dev, y_dev)
 solar_forecaster.solar_eval(x_test, y_test)
 
-solar_forecaster.model.save('models/whole_features')
+# solar_forecaster.model.save('models/whole_features')
 
 #%%
+scenarios = {
+    'whole': ['Ghi', 'Ebh', 'Dni', 'Dhi', 'AirTemp', 'CloudOpacity'],
+    'radiations':['Ghi', 'Ebh', 'Dni', 'Dhi'],
+    'normal':['Ghi', 'AirTemp', 'CloudOpacity'],
+    'minimal':['Ghi', 'CloudOpacity'],
+    'Ghi':['Ghi']
+}
+
 ## loading model and compare their performance
 mses={}
 for sc in scenarios:
-    print(sc)
-    selected_features = scenarios[sc]
+    if sc == 'normal':
+        print(sc)
+        selected_features = scenarios[sc]
 
-    feature_numbers = len(selected_features)
-    resolution = 24
-    x_train, x_test, y_train, y_test = train_test_by_features(selected_features, hist, etap_power)
+        feature_numbers = len(selected_features)
+        resolution = 24
+        x_train, x_test, y_train, y_test = train_test_by_features(selected_features, hist, etap_power)
 
-    loaded_model = keras.models.load_model('models/'+sc)
-    print(loaded_model)
-    predicted = loaded_model.predict(x_test)
-    mse_error = loaded_model.evaluate(x_test, y_test)
-    print(mse_error)
-    mses[sc] = mse_error[0]
-    os.mkdir('models/figs/'+sc)
-    for i, k in enumerate(predicted):
-        print(i)
-        plt.plot(y_test[i])
-        plt.plot(predicted[i])
-        plt.legend(['real', 'pred'])
-        plt.savefig('models/figs/' + sc + '/' + str(i) + '.png')
-        plt.show()
+        loaded_model = keras.models.load_model('models/'+sc)
+        print(loaded_model)
+        predicted = loaded_model.predict(x_test)
+        mse_error = loaded_model.evaluate(x_test, y_test)
+        print(mse_error)
+        mses[sc] = mse_error[0]
+        # os.mkdir('models/figs/'+sc)
+        # for i, k in enumerate(predicted):
+        #     print(i)
+        #     plt.plot(y_test[i])
+        #     plt.plot(predicted[i])
+        #     plt.legend(['real', 'pred'])
+        #     plt.savefig('models/figs/' + sc + '/' + str(i) + '.png')
+        #     plt.show()
 
 
 
@@ -183,11 +218,11 @@ for sc in scenarios:
 
 #%%
 #prediction
-pred = solar_forecaster.solar_predict(x_test)
+pred = solar_forecaster.solar_predict(x_train)
 for i, k in enumerate(pred):
     # print(i[30])
     # plt.plot(x_train[i])
-    plt.plot(y_test[i])
+    plt.plot(y_train[i])
     plt.plot(pred[i])
     plt.legend(['real','pred'])
     plt.show()
@@ -197,98 +232,9 @@ for i, k in enumerate(pred):
 #saving keras model
 solar_forecaster.model.save('models/whole_features')
 #%%
-loaded=keras.models.load_model('models/whole_features')
-#%%
-import keras
-from keras.utils import CustomObjectScope
-from keras.initializers import glorot_uniform
-
-with CustomObjectScope({'GlorotUniform': glorot_uniform()}):
-    model = keras.models.load_model('models/whole_features.h5')
-    #%%
-import tensorflow as tf
-
-lo = tf.keras.models.load_model('models/whole_features')
-
-#%%
-# =============================================================================
-# =============================================================================
-# # select the data file needed
-# =============================================================================
-# =============================================================================
+loaded=keras.models.load_model('models/normal')
 
 
 
-main_data_directory=os.path.join(os.getcwd(),"data")
-resource=FileInf(main_data_directory)
-data_files=resource.files
-#NREL data
-selected_file='NREL_etap_2015.csv'
-selected_data=resource.load_data(selected_file)
-#%%
-
-# =============================================================================
-# input and output selection
-# =============================================================================
-features=['Clearsky DHI','Clearsky DNI','Clearsky GHI',
-          'DHI','DNI','GHI', 'Temperature','Cloud Type', 'Dew Point',
-          'Fill Flag', 'Relative Humidity', 'Solar Zenith Angle',
-          'Surface Albedo', 'Pressure', 'Precipitable Water', 'Wind Direction',
-          'Wind Speed']
-
-selected_features=['Clearsky DNI','DNI','Cloud Type','Temperature','Wind Speed']
-selected_features=features
-###############################################################################
-
-outputs=['Clearsky DHI tmrw','Clearsky DNI tmrw','Clearsky GHI tmrw',
-                      'DHI tmrw','DNI tmrw','GHI tmrw']
-selected_output=['DNI tmrw']
-###############################################################################
-feature_numbers=len(selected_features)
-
-# output_numbers=len(selected_output)
-
-# sample_number=x_train.shape[0]
-# sample_length=x_train.shape[1]
-resolution=48
 
 
-
-x_train,y_train,x_dev,y_dev,x_test,y_test=resource.train_dev_test(selected_file,
-                            selected_features,selected_output, resolution
-                            , train=0.8, dev=0.1, test=0.1)
-#%%
-
-# =============================================================================
-# solar forecaster instance
-# =============================================================================
-# solar forcaster object
-
-solar_forecaster=SolarF(feature_numbers,resolution)
-#define compile parameters
-solar_forecaster.opt_ls_mtr(optimizer='adam',
-                            loss='mse',
-                            metric='mse')
-# #train
-#%%
-# y_train=y_train.reshape(327,48,1)
-solar_forecaster.train(x_train, y_train, batch=5, epoch=5)
-#evaluation on train set
-solar_forecaster.solar_eval(x_train, y_train)
-# #evaluation on dev set
-#%%
-solar_forecaster.solar_eval(x_train, y_train)
-solar_forecaster.solar_eval(x_dev, y_dev)
-solar_forecaster.solar_eval(x_test, y_test)
-
-
-#%%
-#prediction
-pred = solar_forecaster.solar_predict(x_test)
-for i, k in enumerate(pred):
-    # print(i[30])
-    # plt.plot(x_train[i])
-    plt.plot(y_test[i])
-    plt.plot(pred[i])
-    plt.show()
-# selected_data.head()

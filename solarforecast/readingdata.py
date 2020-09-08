@@ -16,6 +16,9 @@ import solcast
 from opencage.geocoder import OpenCageGeocode
 import datetime
 import math
+import json
+import urllib.request
+
 
 
 class EtapData:
@@ -152,6 +155,7 @@ class SolcastDataForecast:
         radiation_actuals = solcast.RadiationEstimatedActuals(self.lat, self.lng, self.solcast_api_key)
         self.actuals_data=pd.DataFrame(radiation_actuals.estimated_actuals)
         self.__local_time()
+        return self.actuals_data, self.forecasts_data
 
     def __local_time(self):
         #timezonefinder and get append UNIX time as well
@@ -170,6 +174,36 @@ class SolcastDataForecast:
             temp_time.append(utc_to_local(t,desired_tz))
         
         self.forecasts_data['local_time'] = temp_time
+
+class OpenWeatherAPI:
+    def __init__(self, location_api, address, openweather_api):
+        self.location_api = location_api
+        self.address = address
+        self.openweather_api = openweather_api
+
+
+    def __get_address_lat_lng(self):
+        geocoder = OpenCageGeocode(self.location_api)
+        self.whole_location_info = geocoder.geocode(self.address)[0]
+        geo = self.whole_location_info['geometry']
+        lat, lng = geo['lat'], geo['lng']
+        self.lat = lat
+        self.lng = lng
+# location_api_key='23e6edd3ccc7437b90c589fd7c9c6213'
+
+    def get_forecasted_data(self):
+        self.__get_address_lat_lng()
+        base_url = 'https://api.openweathermap.org/data/2.5/onecall?lat=' + str(self.lat) + \
+                   '&lon=' + str(self.lng) +'&%20exclude=hourly&appid=' + self.openweather_api
+
+        with urllib.request.urlopen(base_url) as base_url:
+            # print(search_address)
+            data = json.loads(base_url.read().decode())
+
+
+        hourly = data['hourly']
+        hourly = pd.DataFrame(hourly)
+        return hourly
 
 
 
