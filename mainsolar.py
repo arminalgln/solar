@@ -1,5 +1,6 @@
 import importlib
 import solarforecast
+import tensorflow as tf
 solarforecast = importlib.reload(solarforecast)
 from solarforecast import FileInf
 from solarforecast import SolcastHistorical
@@ -10,15 +11,16 @@ import matplotlib
 import matplotlib.pyplot as plt
 from solarforecast import SolarF
 import numpy as np
-import keras
+# import keras
 import pandas as pd
 import datetime
 import time
 from time import sleep
 import schedule
-os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+# os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
 #%%
+
 #%%
 ####################################################
 ####################################################
@@ -147,6 +149,19 @@ for sc in scenarios:
 
 
 #%%
+gpus = tf.config.experimental.list_physical_devices('GPU')
+if gpus:
+  # Restrict TensorFlow to only allocate 1GB of memory on the first GPU
+  try:
+    tf.config.experimental.set_virtual_device_configuration(
+        gpus[0],
+        [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=1024)])
+    logical_gpus = tf.config.experimental.list_logical_devices('GPU')
+    print(len(gpus), "Physical GPUs,", len(logical_gpus), "Logical GPUs")
+  except RuntimeError as e:
+    # Virtual devices must be set before GPUs have been initialized
+    print(e)
+#%%
 feature_numbers=3
 resolution=24
 scenarios = {
@@ -160,13 +175,14 @@ selected_features = scenarios['normal']
 x_train, x_test, y_train, y_test = train_test_by_features(selected_features, hist, etap_power)
 solar_forecaster = SolarF(feature_numbers,resolution)
 
+
 solar_forecaster.opt_ls_mtr(optimizer='adam',
                             loss='mse',
                             metric='mse')
 # #train
 
 # y_train=y_train.reshape(327,48,1)
-solar_forecaster.train(x_train, y_train, batch=10, epoch=50)
+solar_forecaster.train(x_train, y_train, batch=1, epoch=100)
 #evaluation on train set
 solar_forecaster.solar_eval(x_train, y_train)
 # #evaluation on dev set
@@ -218,11 +234,11 @@ for sc in scenarios:
 
 #%%
 #prediction
-pred = solar_forecaster.solar_predict(x_train)
+pred = solar_forecaster.solar_predict(x_test)
 for i, k in enumerate(pred):
     # print(i[30])
     # plt.plot(x_train[i])
-    plt.plot(y_train[i])
+    plt.plot(y_test[i])
     plt.plot(pred[i])
     plt.legend(['real','pred'])
     plt.show()
@@ -233,7 +249,8 @@ for i, k in enumerate(pred):
 solar_forecaster.model.save('models/whole_features')
 #%%
 loaded=keras.models.load_model('models/normal')
-
+#%%
+a=2
 
 
 
